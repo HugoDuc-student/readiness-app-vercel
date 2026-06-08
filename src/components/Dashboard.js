@@ -7,6 +7,33 @@ import {
 import { MetricCard, Card, SectionTitle } from './UI';
 import { colorFromScore, COLOR_MAP, interpretDelta, calcDelta, formatDateShort } from '../metrics';
 
+function exportCSV(entries) {
+  const rows = [
+    ['date','sommeil','fatigue_matin','douleurs','stress','vitalite','hooper','hrv','fc_repos','fatigue_overall','rpe','fatigue_post','feeling','motivation','fc_seance','duree_min','charge_interne','fatigue_training','delta_fatigue']
+  ];
+  Object.keys(entries).sort().forEach(d => {
+    const m = entries[d]?.morning;
+    const p = entries[d]?.post_session;
+    const delta = m && p ? (p.fatigue_training - m.fatigue_overall).toFixed(1) : '';
+    rows.push([
+      d,
+      m?.sleep ?? '', m?.fatigue ?? '', m?.soreness ?? '', m?.stress ?? '', m?.vitality ?? '',
+      m?.hooper ?? '', m?.hrv ?? '', m?.restingHr ?? '', m?.fatigue_overall?.toFixed(1) ?? '',
+      p?.rpe ?? '', p?.postFatigue ?? '', p?.feeling ?? '', p?.motivation ?? '',
+      p?.sessionHr ?? '', p?.duration ?? '', p?.training_load ?? '',
+      p?.fatigue_training?.toFixed(1) ?? '', delta,
+    ]);
+  });
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `enduraw_readiness_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -65,7 +92,15 @@ export default function Dashboard({ entries }) {
 
   return (
     <div style={styles.section}>
-      <SectionTitle>Résumé — 7 derniers jours</SectionTitle>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Résumé — 7 derniers jours</span>
+        <button
+          onClick={() => exportCSV(entries)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'transparent', border: '1px solid var(--gray-200)', borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'var(--gray-600)', cursor: 'pointer', fontFamily: 'var(--font)' }}
+        >
+          ↓ Exporter CSV
+        </button>
+      </div>
 
       <div style={styles.metricsGrid}>
         <MetricCard
