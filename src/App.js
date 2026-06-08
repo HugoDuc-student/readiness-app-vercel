@@ -9,12 +9,53 @@ const STORAGE_KEY = 'enduraw_readiness_v1';
 const today = new Date();
 const todayKey = formatDateKey(today);
 
+function generateDemoData() {
+  const data = {};
+  const scenarios = [
+    { sleep:5, fatigue:4, soreness:3, stress:3, vitality:5, hrv:'58', restingHr:'51', rpe:6, postFatigue:5, feeling:3, motivation:5, sessionHr:'158', duration:'55' },
+    { sleep:3, fatigue:6, soreness:5, stress:5, vitality:2, hrv:'38', restingHr:'62', rpe:7, postFatigue:6, feeling:-3, motivation:3, sessionHr:'168', duration:'70' },
+    { sleep:6, fatigue:3, soreness:2, stress:2, vitality:6, hrv:'65', restingHr:'48', rpe:5, postFatigue:3, feeling:5, motivation:6, sessionHr:'148', duration:'45' },
+    { sleep:4, fatigue:5, soreness:4, stress:4, vitality:3, hrv:'44', restingHr:'57', rpe:8, postFatigue:6, feeling:-1, motivation:4, sessionHr:'172', duration:'80' },
+    { sleep:6, fatigue:2, soreness:2, stress:2, vitality:7, hrv:'72', restingHr:'46', rpe:4, postFatigue:2, feeling:5, motivation:7, sessionHr:'140', duration:'40' },
+    { sleep:5, fatigue:3, soreness:3, stress:3, vitality:5, hrv:'60', restingHr:'50', rpe:6, postFatigue:4, feeling:3, motivation:5, sessionHr:'155', duration:'60' },
+    { sleep:2, fatigue:7, soreness:6, stress:6, vitality:1, hrv:'31', restingHr:'68', rpe:8, postFatigue:7, feeling:-5, motivation:2, sessionHr:'175', duration:'75' },
+    { sleep:6, fatigue:3, soreness:2, stress:2, vitality:6, hrv:'68', restingHr:'47', rpe:5, postFatigue:3, feeling:4, motivation:6, sessionHr:'150', duration:'50' },
+    { sleep:5, fatigue:4, soreness:3, stress:3, vitality:4, hrv:'55', restingHr:'53', rpe:7, postFatigue:5, feeling:1, motivation:4, sessionHr:'162', duration:'65' },
+    { sleep:7, fatigue:2, soreness:1, stress:1, vitality:7, hrv:'75', restingHr:'44', rpe:4, postFatigue:2, feeling:5, motivation:7, sessionHr:'138', duration:'35' },
+  ];
+
+  for (let i = scenarios.length - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (scenarios.length - i));
+    const key = formatDateKey(d);
+    const s = scenarios[i];
+    const hooper = s.sleep + s.fatigue + s.soreness + s.stress;
+    const subjMorn = (s.fatigue/7 + s.stress/7 + s.soreness/7 + (8-s.sleep)/7 + (8-s.vitality)/7) / 5;
+    const hrvScore = Math.min(1, Math.max(0, 1 - Number(s.hrv)/60));
+    const hrScore = Math.min(1, Math.max(0, (Number(s.restingHr)-50)/30));
+    const fo = Math.round(((subjMorn*0.60 + hrvScore*0.25 + hrScore*0.15)) * 100) / 10;
+    const feelingNorm = (5 - s.feeling) / 10;
+    const subjPost = (s.postFatigue/7 + s.rpe/10 + feelingNorm + (8-s.motivation)/7) / 4;
+    const hrInt = Math.min(1, Number(s.sessionHr)/185);
+    const load = Math.min(1, (s.rpe * Number(s.duration))/600);
+    const ft = Math.round(((subjPost*0.50 + hrInt*0.30 + load*0.20)) * 100) / 10;
+    data[key] = {
+      morning: { sleep: s.sleep, fatigue: s.fatigue, soreness: s.soreness, stress: s.stress, vitality: s.vitality, hrv: s.hrv, restingHr: s.restingHr, sleepDur: null, hooper, fatigue_overall: fo },
+      post_session: { rpe: s.rpe, postFatigue: s.postFatigue, feeling: s.feeling, motivation: s.motivation, sessionHr: s.sessionHr, duration: s.duration, fatigue_training: ft, training_load: s.rpe * Number(s.duration) },
+    };
+  }
+  return data;
+}
+
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    if (raw) return JSON.parse(raw);
+    const demo = generateDemoData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(demo));
+    return demo;
   } catch {
-    return {};
+    return generateDemoData();
   }
 }
 
